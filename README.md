@@ -18,4 +18,4 @@ Activate Health Loader Hometask
 
 # Time spent
 
-Overall one and a half days. 9 hours and 5 hours. 14 hours total.
+Overall two days. 9 hours and 6 hours. 15 hours total.

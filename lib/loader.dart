@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:activate_health_loader_hometask/functions.dart';
 import 'package:activate_health_loader_hometask/colors.dart';
@@ -110,11 +111,12 @@ class _LoadingArcState extends State<LoadingArc> with SingleTickerProviderStateM
   }
 
   void playEndingAnimation() {
-    confettiController.play();
-    Future.delayed(const Duration(milliseconds: 500), textSequenceAnimationController.forward);
-    setState(() {
-        didPlayEndingAnimation = true;
-    });
+    // Blast confetti 150 ms before fully loaded (100%).
+    Future.delayed(Duration(milliseconds: math.max(loadTweenDurationMilliseconds - 150, 0)),
+      () => confettiController.play()
+    );
+    // Start animating percent and "done text" crossfade.
+    Future.delayed(const Duration(milliseconds: 700), textSequenceAnimationController.forward);
   }
 
   @override
@@ -127,7 +129,8 @@ class _LoadingArcState extends State<LoadingArc> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     if (widget.loadedValue >= 100 && !didPlayEndingAnimation) {
-      Future.delayed(Duration(milliseconds: math.max(loadTweenDurationMilliseconds - 150, 0)), playEndingAnimation);
+      didPlayEndingAnimation = true;
+      playEndingAnimation();
     }
     return TweenAnimationBuilder<double>(
       curve: Curves.ease,
@@ -251,11 +254,12 @@ class ProgressIndicatorText extends StatelessWidget {
 
 class SpinningArcs extends StatefulWidget {
   const SpinningArcs({
+    Key? key,
     required this.onFinishAnimationCallback,
     required this.size,
     this.sweepAngle = 18,
     this.loop = true,
-  });
+  }) : super(key: key);
 
   final Function onFinishAnimationCallback;
   final double size;
@@ -268,10 +272,17 @@ class SpinningArcs extends StatefulWidget {
 
 class _SpinningArcsState extends State<SpinningArcs> with SingleTickerProviderStateMixin {
   late AnimationController controller;
-  late Animation<double> animation;
   late SequenceAnimation sequenceAnimation;
+  late Duration headCurveDuration;
   late double headEndingFraction;
   late double sweepAngleFraction;
+  bool shouldPlayFinishingAnimation = false;
+
+  void onHeadCurveFinish() {
+    if (!widget.loop) {
+      shouldPlayFinishingAnimation = true;
+    }
+  }
 
   @override
   void initState() {
@@ -281,11 +292,12 @@ class _SpinningArcsState extends State<SpinningArcs> with SingleTickerProviderSt
     )
     ..addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        if (widget.loop) {
-          controller.reset();
-          controller.forward();
-        } else {
+        if (shouldPlayFinishingAnimation) {
           widget.onFinishAnimationCallback();
+        } else {
+          controller.reset();
+          Timer(headCurveDuration, onHeadCurveFinish);
+          controller.forward();
         }
       }
     });
@@ -299,7 +311,7 @@ class _SpinningArcsState extends State<SpinningArcs> with SingleTickerProviderSt
     const Duration zeroDuration = Duration(seconds: 0);
     Duration tailLinearDuration = decimalDurationToDuration(linearDurationDecimal);
     Duration headFirstLinearDuration = decimalDurationToDuration(headFirstLinearDurationDecimal);
-    Duration headCurveDuration = decimalDurationToDuration(headFirstLinearDurationDecimal + curveDurationDecimal);
+    headCurveDuration = decimalDurationToDuration(headFirstLinearDurationDecimal + curveDurationDecimal);
     Duration wholeDuration = decimalDurationToDuration(wholeDurationDecimal);
 
     const double headTweenBreakPoint = headFirstLinearDurationDecimal / linearDurationDecimal;
@@ -323,7 +335,6 @@ class _SpinningArcsState extends State<SpinningArcs> with SingleTickerProviderSt
     // Head animation uses altering values in order to rotate curve animation.
     // I.e. the the curvetween starts at 0.0 and ends at 1.0, but we want it to start at 0.25 and end at 0.75.
     sequenceAnimation = SequenceAnimationBuilder()
-
       // Tail linear.
       .addAnimatable(animatable: Tween(begin: 0.0, end: 1.0), from: zeroDuration, to: tailLinearDuration, tag: 'tail')
       // Tail curve.
@@ -331,20 +342,16 @@ class _SpinningArcsState extends State<SpinningArcs> with SingleTickerProviderSt
 
       // Head first linear.
       .addAnimatable(animatable: Tween(begin: 0.0, end: headTweenBreakPoint), from: zeroDuration, to: headFirstLinearDuration, tag: 'head')
-
       // Head curve.
       .addAnimatable(animatable: CurveTween(curve: lineContinuationCurve), from: headFirstLinearDuration, to: headCurveDuration, tag: 'head')
-
       // Head curve alter value.
       .addAnimatable(animatable: Tween(begin: 0.0, end: 0.0), from: zeroDuration, to: headFirstLinearDuration, tag: 'headCurveAlter')
       .addAnimatable(animatable: Tween(begin: headTweenBreakPoint, end: headTweenBreakPoint), from: headFirstLinearDuration, to: headCurveDuration, tag: 'headCurveAlter')
       .addAnimatable(animatable: Tween(begin: 0.0, end: 0.0), from: headCurveDuration, to: wholeDuration, tag: 'headCurveAlter')
 
       // Head animation ending to continue the animation.
-      .addAnimatable(animatable: Tween(begin: 0.0, end: 0.0), from: headCurveDuration, to: wholeDuration, tag: 'head')
       .addAnimatable(animatable: Tween(begin: 0.0, end: 0.0), from: zeroDuration, to: headCurveDuration, tag: 'headContinuing')
       .addAnimatable(animatable: Tween(begin: headTweenBreakPoint, end: 1.0), from: headCurveDuration, to: wholeDuration, tag: 'headContinuing')
-
       // Head animation ending to finish the animation.
       .addAnimatable(animatable: Tween(begin: 0.0, end: 0.0), from: zeroDuration, to: headCurveDuration, tag: 'headFinishing')
       .addAnimatable(animatable: CurveTween(curve: Curves.decelerate), from: headCurveDuration, to: wholeDuration, tag: 'headFinishing')
@@ -353,6 +360,8 @@ class _SpinningArcsState extends State<SpinningArcs> with SingleTickerProviderSt
 
       .animate(controller);
     controller.forward();
+
+    Timer(headCurveDuration, onHeadCurveFinish);
   }
 
   @override
@@ -376,11 +385,11 @@ class _SpinningArcsState extends State<SpinningArcs> with SingleTickerProviderSt
       builder: (context, child) {
         double headAlterValue =
           sequenceAnimation['headCurveAlter'].value
-            + (widget.loop ?
-                sequenceAnimation['headContinuing'].value
-              :
+            + (shouldPlayFinishingAnimation ?
                 sequenceAnimation['headFinishing'].value * (headEndingFraction + sweepAngleFraction * 2)
                 + sequenceAnimation['headFinishingAlter'].value
+              :
+                sequenceAnimation['headContinuing'].value
               );
         double animatedTailAngleClockwise = calculateAnimatedAngle(0, 'tail', 0.0);
         double animatedTailAngleCounterClockwise = calculateAnimatedAngle(360 - widget.sweepAngle, 'tail', 0.0);

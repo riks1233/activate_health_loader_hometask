@@ -43,8 +43,8 @@ class AppBody extends StatelessWidget {
                 mainAxisSize: MainAxisSize.max,
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  TextButton(onPressed: () => appProvider.loadedValue += 10.0, child: Text('Add 10% loaded')),
-                  TextButton(onPressed: () => appProvider.loadedValue = 0.0, child: Text('Reset loaded')),
+                  TextButton(onPressed: () => appProvider.loadedValue += 10.0, child: const Text('Add 10% loaded')),
+                  TextButton(onPressed: () => appProvider.loadedValue = 0.0, child: const Text('Reset loaded')),
                 ],
               ),
               const SizedBox(height: 20),
