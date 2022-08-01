@@ -28,7 +28,7 @@ class AppBody extends StatelessWidget {
   Widget build(BuildContext context) {
 
     AppProvider appProvider = context.read<AppProvider>();
-    double loadedValue = context.watch<AppProvider>().loadedValue;
+    double loadedValue = context.watch<AppProvider>().loadedValue / 100.0;
     return Scaffold(
       body: Container(
         color: AppColors.background,
@@ -43,8 +43,8 @@ class AppBody extends StatelessWidget {
                 mainAxisSize: MainAxisSize.max,
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  TextButton(onPressed: () => appProvider.loadedValue += 10.0, child: const Text('Add 10% loaded')),
-                  TextButton(onPressed: () => appProvider.loadedValue = 0.0, child: const Text('Reset loaded')),
+                  TextButton(onPressed: () => appProvider.loadedValue += 10, child: const Text('Add 10% loaded')),
+                  TextButton(onPressed: () => appProvider.loadedValue = 0, child: const Text('Reset loaded')),
                 ],
               ),
               const SizedBox(height: 20),

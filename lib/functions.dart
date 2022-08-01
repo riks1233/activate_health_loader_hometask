@@ -2,8 +2,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 
-/// Create a curve, that continues the line tangent (or slope, or velocity)
-/// and ends with the same tangent.
+/// Create a curve, that continues the line tangent (or slope / velocity)
+/// then speeds up and ends with the same tangent.
 Cubic lineTangentContinuationCurve(double tangent) {
   double atan = math.atan(tangent);
   double x = math.cos(atan);

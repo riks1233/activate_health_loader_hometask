@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:math' as math;
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -11,7 +12,8 @@ import 'package:confetti/confetti.dart';
 /// Custom fullscreen progress indicator (loader) widget with a default size of 200.
 ///
 /// The widget has a property [value] (optional double value between 0.0 and 1.0).
-/// Can be higher than 1.0 but is still treated as 1.0.
+/// [value] can also be higher than 1.0 or lesser than 0.0 but is then still treated as
+/// one of the metioned boundaries.
 ///
 /// - If the value is not set, the loader will spin arcs like an indeterminate progress indicator.
 /// - If the value is > 0 but < 1.0, the loader will transform from indeterminate to determinate
@@ -41,16 +43,16 @@ class _ActivateHealthProgressIndicatorState extends State<ActivateHealthProgress
 
   @override
   Widget build(BuildContext context) {
-    bool loop;
-    if (widget.value == 0.0) {
-      loop = true;
+    bool shouldLoop;
+    if (widget.value <= 0.0) {
+      shouldLoop = true;
       showLoadingArc = false;
     } else {
-      loop = false;
+      shouldLoop = false;
     }
 
     Widget currentShownWidget;
-    if (showLoadingArc && widget.value > 0.0) {
+    if (showLoadingArc) {
       currentShownWidget = LoadingArc(
         loadedValue: widget.value,
         color: AppColors.primary,
@@ -58,7 +60,7 @@ class _ActivateHealthProgressIndicatorState extends State<ActivateHealthProgress
         strokeWidth: size * 0.066,
       );
     } else {
-      currentShownWidget = SpinningArcs(size: size, loop: loop, onFinishAnimationCallback: finishedIndeterminateLoadingAnimation);
+      currentShownWidget = SpinningArcs(size: size, shouldLoop: shouldLoop, onFinishAnimationCallback: finishedIndeterminateLoadingAnimation);
     }
 
     return SizedBox(
@@ -128,7 +130,7 @@ class _LoadingArcState extends State<LoadingArc> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    if (widget.loadedValue >= 100 && !didPlayEndingAnimation) {
+    if (widget.loadedValue >= 1.0 && !didPlayEndingAnimation) {
       didPlayEndingAnimation = true;
       playEndingAnimation();
     }
@@ -139,8 +141,7 @@ class _LoadingArcState extends State<LoadingArc> with SingleTickerProviderStateM
       builder: (context, double value, child) {
         double tailAngle;
         double headAngle;
-        int displayValue = math.max(math.min(value.round(), 100), 1);
-        value = value / 100;
+        int displayValue = math.max(math.min((value * 100).round(), 100), 1);
         if (value >= 1.0) {
           tailAngle = 0;
           headAngle = 360;
@@ -258,13 +259,13 @@ class SpinningArcs extends StatefulWidget {
     required this.onFinishAnimationCallback,
     required this.size,
     this.sweepAngle = 18,
-    this.loop = true,
+    this.shouldLoop = true,
   }) : super(key: key);
 
   final Function onFinishAnimationCallback;
   final double size;
   final double sweepAngle;
-  final bool loop;
+  final bool shouldLoop;
 
   @override
   State<SpinningArcs> createState() => _SpinningArcsState();
@@ -279,7 +280,7 @@ class _SpinningArcsState extends State<SpinningArcs> with SingleTickerProviderSt
   bool shouldPlayFinishingAnimation = false;
 
   void onHeadCurveFinish() {
-    if (!widget.loop) {
+    if (!widget.shouldLoop) {
       shouldPlayFinishingAnimation = true;
     }
   }
