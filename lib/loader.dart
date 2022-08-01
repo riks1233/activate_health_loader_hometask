@@ -54,7 +54,7 @@ class _ActivateHealthProgressIndicatorState extends State<ActivateHealthProgress
     Widget currentShownWidget;
     if (showLoadingArc) {
       currentShownWidget = LoadingArc(
-        loadedValue: widget.value,
+        loadedValue: (widget.value * 100.0).floor() / 100.0,
         color: AppColors.primary,
         size: size,
         strokeWidth: size * 0.066,
